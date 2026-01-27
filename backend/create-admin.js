@@ -1,93 +1,66 @@
-// Quick script to create admin user for testing
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 
 const prisma = new PrismaClient();
 
-async function createAdminUser() {
+async function createAdmin() {
     try {
-        // Create admin user
-        // NIK: admin
-        // Password: admin
+        const adminNIK = '1234567890123456'; // NIK admin default
+        const adminPassword = 'admin123';
 
-        const password = await bcrypt.hash('admin', 10);
+        // Cek apakah admin sudah ada
+        const existingAdmin = await prisma.user.findFirst({
+            where: {
+                OR: [
+                    { nik: adminNIK },
+                    { role: 'ADMIN' }
+                ]
+            }
+        });
 
+        if (existingAdmin) {
+            console.log('✅ Admin user sudah ada:');
+            console.log('   NIK:', existingAdmin.nik);
+            console.log('   Nama:', existingAdmin.name);
+            console.log('   Email:', existingAdmin.email || '(tidak ada)');
+            console.log('\n📝 Untuk login gunakan:');
+            console.log('   NIK:', existingAdmin.nik);
+            console.log('   Password: (sesuai yang telah diset, default: tanggal lahir DDMMYYYY)');
+            return;
+        }
+
+        // Hash password
+        const hashedPassword = await bcrypt.hash(adminPassword, 10);
+
+        // Buat user admin dengan tanggal lahir default (01-01-1990)
+        const birthDate = new Date('1990-01-01');
+
+        // Buat user admin
         const admin = await prisma.user.create({
             data: {
-                nik: 'admin',
-                name: 'Admin SEFILA',
-                birthDate: new Date('1990-01-01'),
+                nik: adminNIK,
                 email: 'admin@sefila.com',
-                phoneNumber: '628123456789',
-                password: password,
+                password: hashedPassword,
+                name: 'Admin SEFILA',
+                birthDate: birthDate,
+                phoneNumber: '081234567890',
                 role: 'ADMIN'
             }
         });
 
-        console.log('✅ Admin user created successfully!');
-        console.log('=====================================');
-        console.log('NIK: admin');
-        console.log('Password: admin');
-        console.log('Role: ADMIN');
-        console.log('=====================================');
-        console.log('You can now login at http://localhost:5173/login');
-
-        // Also list all users with their NIKs
-        console.log('\n📋 All users in database:');
-        const allUsers = await prisma.user.findMany({
-            select: {
-                id: true,
-                nik: true,
-                name: true,
-                birthDate: true,
-                role: true
-            }
-        });
-
-        allUsers.forEach(user => {
-            const bd = user.birthDate ? new Date(user.birthDate) : null;
-            const password = bd ?
-                `${String(bd.getDate()).padStart(2, '0')}${String(bd.getMonth() + 1).padStart(2, '0')}${bd.getFullYear()}`
-                : 'N/A';
-            console.log(`\n- ID: ${user.id}`);
-            console.log(`  NIK: ${user.nik}`);
-            console.log(`  Name: ${user.name}`);
-            console.log(`  Role: ${user.role}`);
-            console.log(`  Password (from birthDate): ${password}`);
-        });
-
+        console.log('✅ Admin user berhasil dibuat!');
+        console.log('\n📝 Kredensial Login:');
+        console.log('   NIK:', admin.nik);
+        console.log('   Password:', adminPassword);
+        console.log('\n👤 Info Admin:');
+        console.log('   Nama:', admin.name);
+        console.log('   Email:', admin.email);
+        console.log('   Role:', admin.role);
     } catch (error) {
-        if (error.code === 'P2002') {
-            console.log('⚠️ Admin user already exists!');
-            console.log('\nFetching existing users...\n');
-
-            const allUsers = await prisma.user.findMany({
-                select: {
-                    id: true,
-                    nik: true,
-                    name: true,
-                    birthDate: true,
-                    role: true
-                }
-            });
-
-            allUsers.forEach(user => {
-                const bd = user.birthDate ? new Date(user.birthDate) : null;
-                const password = bd ?
-                    `${String(bd.getDate()).padStart(2, '0')}${String(bd.getMonth() + 1).padStart(2, '0')}${bd.getFullYear()}`
-                    : 'N/A';
-                console.log(`\n- ID: ${user.id}`);
-                console.log(`  NIK: ${user.nik}`);
-                console.log(`  Name: ${user.name}`);
-                console.log(`  Role: ${user.role}`);
-                console.log(`  Password (from birthDate): ${password}`);
-            });
-        } else {
-            console.error('Error:', error);
-        }
+        console.error('❌ Error:', error.message);
     } finally {
         await prisma.$disconnect();
     }
 }
 
-createAdminUser();
+createAdmin();
