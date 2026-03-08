@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useRegistrationStore } from '../../stores/registration';
 import { useLabResultStore } from '../../stores/labResult';
@@ -51,6 +51,39 @@ const hasilDNAHPVOptions = [
   { value: 'POSITIF', label: 'Positif' },
   { value: 'TIDAK_TERBACA', label: 'Tidak Terbaca' },
 ];
+
+// Computed preview of tindak lanjut
+const tindakLanjutPreview = computed(() => {
+  const parts = [];
+
+  switch (formData.value.hasilIVA) {
+    case 'NEGATIF':
+      parts.push({ icon: '✅', text: 'Hasil IVA Negatif: Periksa kembali dalam 1 tahun.', color: 'text-green-700' });
+      break;
+    case 'POSITIF':
+      parts.push({ icon: '🚨', text: 'Hasil IVA Positif: Krioterapi atau rujukan dengan membawa surat rekomendasi dari Puskesmas Bugangan.', color: 'text-red-700' });
+      break;
+    case 'CURIGA_KANKER':
+      parts.push({ icon: '⏳', text: 'Hasil IVA Ragu-ragu: Periksa kembali dalam 6 bulan.', color: 'text-yellow-700' });
+      break;
+  }
+
+  const subTypes = {
+    subType16: 'Sub Type 16',
+    subType18: 'Sub Type 18',
+    subType52: 'Sub Type 52',
+    subTypeLainnya: 'Sub Type Lainnya',
+  };
+  const positifList = Object.entries(subTypes)
+    .filter(([key]) => formData.value[key] === 'POSITIF')
+    .map(([, label]) => label);
+
+  if (positifList.length > 0) {
+    parts.push({ icon: '🧬', text: `DNA HPV Positif (${positifList.join(', ')}): Periksa kembali dalam 6 bulan.`, color: 'text-orange-700' });
+  }
+
+  return parts;
+});
 
 onMounted(async () => {
   try {
@@ -257,7 +290,23 @@ const formatDate = (dateString) => {
                 </div>
               </div>
 
-              <!-- Section 3: Doctor's Notes -->
+              <!-- Section 3: Preview Tindak Lanjut -->
+              <div class="rounded-xl overflow-hidden border-2 border-indigo-300">
+                <div class="px-6 py-3 bg-indigo-500 font-bold text-white flex items-center gap-2">
+                  📋 Preview Tindak Lanjut (Otomatis)
+                </div>
+                <div class="p-6 bg-indigo-50 space-y-3">
+                  <div v-if="tindakLanjutPreview.length === 0" class="text-gray-500 italic text-sm">
+                    Tindak lanjut akan muncul setelah Anda memilih hasil IVA.
+                  </div>
+                  <div v-for="(item, idx) in tindakLanjutPreview" :key="idx" class="flex items-start gap-3">
+                    <span class="text-lg mt-0.5">{{ item.icon }}</span>
+                    <p class="font-medium leading-relaxed" :class="item.color">{{ item.text }}</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Section 4: Doctor's Notes -->
               <div>
                 <h4 class="text-lg font-bold text-textPrimary mb-4 flex items-center gap-2">
                   <span class="w-8 h-8 rounded-full bg-gray-600 text-white flex items-center justify-center text-sm">3</span>

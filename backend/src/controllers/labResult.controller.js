@@ -1,5 +1,45 @@
 const prisma = require('../config/database');
 
+// ===============================
+// Auto-generate Tindak Lanjut
+// ===============================
+const generateTindakLanjut = (hasilIVA, subType16, subType18, subType52, subTypeLainnya) => {
+    const parts = [];
+
+    // --- Tindak lanjut berdasarkan Hasil IVA ---
+    switch (hasilIVA) {
+        case 'NEGATIF':
+            parts.push('Hasil IVA Negatif: Periksa kembali dalam 1 tahun.');
+            break;
+        case 'POSITIF':
+            parts.push('Hasil IVA Positif: Krioterapi atau rujukan dengan membawa surat rekomendasi dari Puskesmas Bugangan.');
+            break;
+        case 'CURIGA_KANKER':
+            parts.push('Hasil IVA Ragu-ragu: Periksa kembali dalam 6 bulan.');
+            break;
+    }
+
+    // --- Tindak lanjut berdasarkan Hasil DNA HPV ---
+    const dnaSubTypes = { subType16, subType18, subType52, subTypeLainnya };
+    const positifTypes = Object.entries(dnaSubTypes)
+        .filter(([_, val]) => val === 'POSITIF')
+        .map(([key]) => {
+            const labels = {
+                subType16: 'Sub Type 16',
+                subType18: 'Sub Type 18',
+                subType52: 'Sub Type 52',
+                subTypeLainnya: 'Sub Type Lainnya',
+            };
+            return labels[key];
+        });
+
+    if (positifTypes.length > 0) {
+        parts.push(`DNA HPV Positif (${positifTypes.join(', ')}): Periksa kembali dalam 6 bulan.`);
+    }
+
+    return parts.join('\n');
+};
+
 // Create lab result
 const createLabResult = async (req, res) => {
     try {
@@ -55,11 +95,15 @@ const createLabResult = async (req, res) => {
             });
         }
 
+        // Auto-generate tindak lanjut
+        const tindakLanjut = generateTindakLanjut(hasilIVA, subType16, subType18, subType52, subTypeLainnya);
+
         // Create lab result
         const labResult = await prisma.hasilLab.create({
             data: {
                 pendaftaranId,
                 hasilIVA: hasilIVA || 'NEGATIF',
+                tindakLanjut,
                 jenisSpesimen,
                 noSpesimen,
                 tanggalPengambilan: tanggalPengambilan ? new Date(tanggalPengambilan) : null,
@@ -160,10 +204,17 @@ const updateLabResult = async (req, res) => {
             catatanDokter
         } = req.body;
 
+        // Auto-generate tindak lanjut if hasilIVA is provided
+        let tindakLanjut;
+        if (hasilIVA) {
+            tindakLanjut = generateTindakLanjut(hasilIVA, subType16, subType18, subType52, subTypeLainnya);
+        }
+
         const labResult = await prisma.hasilLab.update({
             where: { id: parseInt(id) },
             data: {
                 hasilIVA,
+                ...(tindakLanjut !== undefined && { tindakLanjut }),
                 jenisSpesimen,
                 noSpesimen,
                 tanggalPengambilan: tanggalPengambilan ? new Date(tanggalPengambilan) : undefined,

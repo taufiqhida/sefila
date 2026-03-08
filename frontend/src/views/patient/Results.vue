@@ -249,6 +249,27 @@ const setResultCardRef = (el, id) => {
               </div>
             </div>
 
+            <!-- Section 3: Tindak Lanjut -->
+            <div v-if="result.tindakLanjut" class="mb-6 rounded-xl overflow-hidden border-2"
+              :class="result.hasilIVA === 'POSITIF' ? 'border-red-400' : result.hasilIVA === 'NEGATIF' ? 'border-green-400' : 'border-yellow-400'"
+            >
+              <div class="px-6 py-3 font-bold text-white"
+                :class="result.hasilIVA === 'POSITIF' ? 'bg-red-500' : result.hasilIVA === 'NEGATIF' ? 'bg-green-500' : 'bg-yellow-500'"
+              >
+                📋 Tindak Lanjut / Rekomendasi
+              </div>
+              <div class="p-6 bg-white space-y-3">
+                <div v-for="(line, idx) in result.tindakLanjut.split('\n')" :key="idx" class="flex items-start gap-3">
+                  <span v-if="line.startsWith('Hasil IVA')" class="text-lg mt-0.5">
+                    {{ result.hasilIVA === 'NEGATIF' ? '✅' : result.hasilIVA === 'POSITIF' ? '🚨' : '⏳' }}
+                  </span>
+                  <span v-else-if="line.startsWith('DNA HPV')" class="text-lg mt-0.5">🧬</span>
+                  <span v-else class="text-lg mt-0.5">📌</span>
+                  <p class="text-gray-800 font-medium leading-relaxed">{{ line }}</p>
+                </div>
+              </div>
+            </div>
+
             <!-- Doctor's Notes -->
             <div v-if="result.catatanDokter" class="p-4 bg-blue-50 rounded-lg mb-6">
               <p class="text-sm font-semibold text-primary mb-2">📝 Catatan Dokter</p>
